@@ -56,6 +56,18 @@ def test_api_recommend_endpoint_never_returns_an_active_dislike():
         pytest.skip('No demo.npz user has an active dislike — test is not exercising anything')
 
 
+def test_models_endpoint_lists_all_four_with_validation_default():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    response = client.get('/models')
+    assert response.status_code == 200
+    body = response.json()
+    assert body['models'] == ['NextBeat', 'Sequence-only GRU', 'ItemKNN', 'Most Popular']
+    manifest = json.loads((ROOT / 'manifest.json').read_text())
+    assert body['default'] == manifest['selected_model_by_validation']
+
+
 def test_streamlit_real_prediction():
     from streamlit.testing.v1 import AppTest
     at = AppTest.from_file(str(ROOT.parent / 'app.py')).run(timeout=30)

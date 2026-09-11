@@ -1,14 +1,20 @@
 """Read-only API for the trained NextBeat model; anonymous IDs only."""
 from pathlib import Path
 import json
+import os
 import numpy as np
 import scipy.sparse as sp
 import torch
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from models import NextBeat
 from run import top10, windowed_active_dislikes
 
 app = FastAPI(title='NextBeat', version='1.0.0')
+origins = os.environ.get('ALLOWED_ORIGINS', '*')
+app.add_middleware(CORSMiddleware, allow_origins=origins.split(',') if origins != '*' else ['*'],
+                    allow_methods=['GET', 'POST'], allow_headers=['*'])
 ROOT = Path(__file__).parent / 'artifacts'
 cache = None
 
@@ -35,6 +41,12 @@ def resources():
 @app.get('/health')
 def health():
     return {'ready': (ROOT / 'nextbeat.pt').exists() and (ROOT / 'demo.npz').exists()}
+
+
+@app.get('/models')
+def models():
+    data, _, selected = resources()
+    return {'models': ['NextBeat', 'Sequence-only GRU', 'ItemKNN', 'Most Popular'], 'default': selected}
 
 
 @app.get('/users')
