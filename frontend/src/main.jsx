@@ -21,22 +21,32 @@ function App() {
   const [metrics, setMetrics] = useState(null)
   const [eligibleTargets, setEligibleTargets] = useState(0)
   const [totalTargets, setTotalTargets] = useState(0)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   async function handleRecommend() {
-    const body = await postRecommend(user, { model, what_if: whatIf })
-    setRecommendations(body.recommendations)
+    if (user == null) return
+    setLoading(true)
+    try {
+      const body = await postRecommend(user, { model, what_if: whatIf })
+      setRecommendations(body.recommendations)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     getUsers().then((body) => {
       setUsers(body.anonymous_user_ids)
       setUser(body.anonymous_user_ids[0])
-    })
+    }).catch((e) => setError(e.message))
     getModels().then((body) => {
       setModelList(body.models)
       setDefaultModel(body.default)
       setModel(body.default)
-    })
+    }).catch((e) => setError(e.message))
   }, [])
 
   useEffect(() => {
@@ -48,19 +58,24 @@ function App() {
       setMetrics(body.metrics)
       setEligibleTargets(body.eligible_targets)
       setTotalTargets(body.total_targets)
-    })
+    }).catch((e) => setError(e.message))
   }, [])
+
+  useEffect(() => { setRecommendations([]) }, [user, model, whatIf])
 
   return (
     <div className="app">
       <h1>NextBeat</h1>
       <p className="subtitle">Real Yambda listening histories · trained recommendation models · anonymous track IDs</p>
+      {error && <p className="card" style={{color: '#f87171'}}>Error: {error} — the backend may be waking up (cold starts can take ~40s on the free tier), try again in a moment.</p>}
       <div className="card">
         <h2>Selection</h2>
         <UserSelect users={users} value={user} onChange={setUser} />
         <ModelSelect models={modelList} defaultModel={defaultModel} value={model} onChange={setModel} />
         <WhatIfPicker value={whatIf} onChange={setWhatIf} />
-        <button className="primary-button" onClick={handleRecommend}>Recommend next tracks</button>
+        <button className="primary-button" onClick={handleRecommend} disabled={!user || loading}>
+          {loading ? 'Loading…' : 'Recommend next tracks'}
+        </button>
       </div>
       <div className="card">
         <h2>Recent real history</h2>
