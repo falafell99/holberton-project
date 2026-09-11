@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
-import { getUsers, getModels, getHistory, postRecommend } from './api'
+import { getUsers, getModels, getHistory, postRecommend, getMetrics } from './api'
 import UserSelect from './components/UserSelect'
 import ModelSelect from './components/ModelSelect'
 import HistoryTable from './components/HistoryTable'
 import WhatIfPicker from './components/WhatIfPicker'
 import RecommendationsTable from './components/RecommendationsTable'
+import MetricsPanel from './components/MetricsPanel'
 import './styles.css'
 
 function App() {
@@ -17,6 +18,9 @@ function App() {
   const [history, setHistory] = useState([])
   const [whatIf, setWhatIf] = useState('keep')
   const [recommendations, setRecommendations] = useState([])
+  const [metrics, setMetrics] = useState(null)
+  const [eligibleTargets, setEligibleTargets] = useState(0)
+  const [totalTargets, setTotalTargets] = useState(0)
 
   async function handleRecommend() {
     const body = await postRecommend(user, { model, what_if: whatIf })
@@ -39,6 +43,14 @@ function App() {
     if (user != null) getHistory(user).then((body) => setHistory(body.history))
   }, [user])
 
+  useEffect(() => {
+    getMetrics().then((body) => {
+      setMetrics(body.metrics)
+      setEligibleTargets(body.eligible_targets)
+      setTotalTargets(body.total_targets)
+    })
+  }, [])
+
   return (
     <div className="app">
       <h1>NextBeat</h1>
@@ -57,6 +69,10 @@ function App() {
       <div className="card">
         <h2>Recommended next tracks</h2>
         <RecommendationsTable recommendations={recommendations} />
+      </div>
+      <div className="card">
+        <h2>Frozen-model test results</h2>
+        <MetricsPanel metrics={metrics} eligibleTargets={eligibleTargets} totalTargets={totalTargets} />
       </div>
     </div>
   )
