@@ -4,10 +4,10 @@ I kept the users, catalogue, time split, architecture and training budget fixed.
 
 | Model | Mean Recall@10 | SD | Mean NDCG@10 | SD |
 |---|---:|---:|---:|---:|
-| Most Popular | 0.0412 | 0.0000 | 0.0158 | 0.0000 |
+| Most Popular | 0.0402 | 0.0000 | 0.0155 | 0.0000 |
 | ItemKNN | 0.0443 | 0.0000 | 0.0223 | 0.0000 |
-| Sequence-only GRU | 0.0932 | 0.0086 | 0.0527 | 0.0040 |
-| NextBeat | 0.1009 | 0.0076 | 0.0537 | 0.0027 |
+| Sequence-only GRU | 0.0929 | 0.0082 | 0.0519 | 0.0039 |
+| NextBeat | 0.1003 | 0.0073 | 0.0534 | 0.0022 |
 
 NextBeat has higher NDCG in 2/3 training seeds.
 

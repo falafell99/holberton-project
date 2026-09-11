@@ -45,9 +45,9 @@ All events from the selected users are retained. The catalogue is selected using
 
 The comparison includes Most Popular, ItemKNN, a sequence-only GRU, and NextBeat, which adds feedback to the same GRU architecture.
 
-Across training seeds 42, 43 and 44, mean Recall@10 was 10.09% for NextBeat and 9.32% for the sequence-only GRU. Mean NDCG@10 was 0.0537 and 0.0527 respectively. NextBeat had higher NDCG in two of the three runs. This is a small, mixed advantage on one fixed split, not a consistent improvement on every metric.
+Across training seeds 42, 43 and 44, mean Recall@10 was 10.03% for NextBeat and 9.29% for the sequence-only GRU. Mean NDCG@10 was 0.0534 and 0.0519 respectively. NextBeat had higher NDCG in two of the three runs. This is a small, mixed advantage on one fixed split, not a consistent improvement on every metric.
 
-The interface shows the original seed-42 results. It keeps the model selected by validation NDCG, rather than selecting a training seed using test results. In that run, NextBeat had more dislike violations than the sequence-only GRU: 0.312% versus 0.272%.
+The interface shows the original seed-42 results. It keeps the model selected by validation NDCG, rather than selecting a training seed using test results. All four models now score 0.000% dislike violations (NFVR) on the reported test-set metric, across all three training seeds — down from 0.312% for NextBeat and 0.272% for the sequence-only GRU before an inference-time filter was added that excludes any track a user actively disliked from every model's ranking. This reported figure is scoped to the batch evaluation, which checks a user's entire history; the live Streamlit app and API filter only within the same 20-event context window the model sees, so a dislike far outside that window is not guaranteed to be filtered live even though it is filtered in the reported metric.
 
 Recall@10 and NDCG@10 use 994 eligible targets inside the catalogue. Recall over all 2,229 test targets also counts excluded targets as misses. See `docs/Methodology.md`, `REPEATED_SEEDS.md` and `experiments/seed_results.csv` for the protocol and full comparison.
 
