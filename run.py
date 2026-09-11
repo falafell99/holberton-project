@@ -150,14 +150,15 @@ def top10(scores, blocked=None):
     return np.take_along_axis(selected, np.argsort(-np.take_along_axis(scores, selected, axis=1), axis=1), axis=1)
 
 
-def neural_ranks(model, q):
+def neural_ranks(model, q, blocked=None):
     model.eval()
     rows = []
     with torch.no_grad():
         for i in range(0, len(q['y']), 128):
             x = torch.tensor(q['x'][i:i+128], dtype=torch.long)
             f = torch.tensor(q['f'][i:i+128], dtype=torch.float32)
-            rows.append(top10(model.scores(x, f).numpy()))
+            chunk = blocked[i:i+128] if blocked is not None else None
+            rows.append(top10(model.scores(x, f).numpy(), chunk))
     return np.concatenate(rows)
 
 
@@ -184,13 +185,14 @@ def fit_knn(data, t1, out):
     return knn
 
 
-def knn_ranks(knn, q, counts):
+def knn_ranks(knn, q, counts, blocked=None):
     output = []
-    for x in q['x']:
+    for idx, x in enumerate(q['x']):
         seen = x[x >= 2]
         scores = np.asarray(knn[seen].sum(axis=0)).ravel() if len(seen) else counts.copy()
         scores = scores + counts / max(counts.max(), 1) * 1e-6
-        output.append(top10(scores[None])[0])
+        chunk = blocked[idx:idx+1] if blocked is not None else None
+        output.append(top10(scores[None], chunk)[0])
     return np.array(output)
 
 
@@ -210,11 +212,11 @@ def train(args):
     blocked = active_dislikes(data, data['prefix'][test['positions']])
     results = {}
     counts = data['counts']
-    pop = np.repeat(top10(counts[None].copy()), len(test['y']), axis=0)
+    pop = top10(np.tile(counts, (len(test['y']), 1)), blocked)
     results['Most Popular'] = metrics(pop, test, counts, blocked)
     print('Fitting cosine ItemKNN on all training positives...', flush=True)
     knn = fit_knn(data, t1, out)
-    results['ItemKNN'] = metrics(knn_ranks(knn, test, counts), test, counts, blocked)
+    results['ItemKNN'] = metrics(knn_ranks(knn, test, counts, blocked), test, counts, blocked)
     logs = []
     validation = {'Most Popular': float(((np.repeat(top10(counts[None].copy()), len(valid['y']), axis=0) == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean()),
                   'ItemKNN': float(((knn_ranks(knn, valid, counts) == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean())}
@@ -280,7 +282,7 @@ def train(args):
             temporary.replace(resume_path)
         model.load_state_dict(torch.load(out / filename, weights_only=True))
         validation[name] = best
-        results[name] = metrics(neural_ranks(model, test), test, counts, blocked)
+        results[name] = metrics(neural_ranks(model, test, blocked), test, counts, blocked)
         (out / 'results.json').write_text(json.dumps(results, indent=2))
     # Real held-out histories, no invented users or songs.
     np.savez_compressed(out / 'demo.npz', x=test['x'], f=test['f'], y=test['y'],

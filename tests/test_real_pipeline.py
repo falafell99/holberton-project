@@ -92,3 +92,29 @@ def test_windowed_active_dislikes_ignores_padding():
     f = np.zeros((4, 6))
     f[3, 3] = 1
     assert windowed_active_dislikes(items, f).tolist() == [2]
+
+
+def test_neural_ranks_respects_blocked():
+    from run import neural_ranks
+    torch.manual_seed(0)
+    # 13 items so blocking one still leaves >=10 valid candidates (ids 2..12);
+    # with 12 items the valid pool is exactly 10 and top10 is forced to
+    # backfill with an already-blocked id, making the assertion unsatisfiable.
+    model = NextBeat(13, feedback=False)
+    q = dict(x=np.zeros((1, 2), dtype=int), f=np.zeros((1, 2, 6)), y=np.array([2]))
+    unblocked = neural_ranks(model, q)
+    blocked_id = int(unblocked[0, 0])
+    ranks = neural_ranks(model, q, blocked=[np.array([blocked_id])])
+    assert blocked_id not in ranks[0].tolist()
+
+
+def test_knn_ranks_respects_blocked():
+    from run import knn_ranks
+    import scipy.sparse as sp
+    knn = sp.csr_matrix(np.ones((14, 14)))
+    counts = np.ones(14, dtype=np.float32)
+    q = dict(x=np.array([[2, 3]]))
+    unblocked = knn_ranks(knn, q, counts)
+    blocked_id = int(unblocked[0, 0])
+    ranks = knn_ranks(knn, q, counts, blocked=[np.array([blocked_id])])
+    assert blocked_id not in ranks[0].tolist()
