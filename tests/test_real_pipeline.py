@@ -1,6 +1,9 @@
+import json
 from pathlib import Path
 
 import numpy as np
+import pytest
+import scipy.sparse as sp
 import torch
 from models import NextBeat
 from run import contexts, queries, active_dislikes, top10, metrics
@@ -132,12 +135,53 @@ def test_evaluate_stage_is_registered_in_cli():
     assert 'evaluate' in result.stdout
 
 
+def test_evaluate_writes_results_with_zero_nfvr_on_synthetic_fixture(tmp_path):
+    """Exercises evaluate()'s real logic (not just CLI wiring) on a tiny hand-built
+    fixture: one user, one dislike, and a Most Popular count so lopsided that the
+    disliked item would dominate the ranking if the blocked-item filter were removed."""
+    import argparse
+    from run import evaluate
+
+    n_items = 13  # ids 0,1 reserved; 2..12 valid — mirrors the margin used elsewhere
+    # One user: listens to item 2, dislikes item 3, then (well after the test cutoff)
+    # listens to item 4 — that final event is the evaluation target.
+    uid = np.array([100, 100, 100])
+    ts = np.array([1, 2, 100])
+    items = np.array([2, 3, 4], dtype=np.int32)
+    starts = np.array([0, 0, 0])
+    positive = np.array([False, False, True])
+    features = np.zeros((3, 6), dtype=np.float32)
+    features[1, 3] = 1  # dislike event on item 3
+    counts = np.ones(n_items, dtype=np.float32)
+    counts[3] = 100000  # item 3 would top "Most Popular" if the dislike filter did nothing
+    vocab = np.arange(1000, 1000 + (n_items - 2))
+
+    np.savez_compressed(tmp_path / 'prepared.npz', uid=uid, ts=ts, original=items, items=items,
+                        features=features, starts=starts, targets=np.array([], dtype=np.int64),
+                        counts=counts, vocab=vocab, positive=positive)
+    (tmp_path / 'manifest.json').write_text(json.dumps(dict(cutoffs=[10, 50])))
+
+    knn_dense = np.zeros((n_items, n_items), dtype=np.float32)
+    knn_dense[2, 3] = 1e6  # item 2 (in the user's context window) heavily favors item 3
+    knn_dense[3, 3] = 1e6
+    sp.save_npz(tmp_path / 'itemknn.npz', sp.csr_matrix(knn_dense))
+
+    torch.manual_seed(0)
+    torch.save(NextBeat(n_items, feedback=False).state_dict(), tmp_path / 'sequence.pt')
+    torch.save(NextBeat(n_items, feedback=True).state_dict(), tmp_path / 'nextbeat.pt')
+
+    evaluate(argparse.Namespace(out=str(tmp_path), threads=1))
+
+    results = json.loads((tmp_path / 'results.json').read_text())
+    assert set(results) == {'Most Popular', 'ItemKNN', 'Sequence-only GRU', 'NextBeat'}
+    for name, entry in results.items():
+        assert entry['nfvr10'] == 0.0, f'{name} recommended a disliked track'
+
+
+@pytest.mark.skipif(not (ROOT / 'demo.npz').exists(), reason='Train real artifacts first')
 def test_no_model_ever_recommends_an_active_dislike():
     from run import windowed_active_dislikes
-    from models import NextBeat
     data = np.load(ROOT / 'demo.npz')
-    knn = None
-    import scipy.sparse as sp
     knn = sp.load_npz(ROOT / 'itemknn.npz')
     models = {}
     for name, filename, feedback in [('NextBeat', 'nextbeat.pt', True), ('Sequence-only GRU', 'sequence.pt', False)]:
