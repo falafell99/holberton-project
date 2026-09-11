@@ -7,7 +7,7 @@ import scipy.sparse as sp
 import streamlit as st
 import torch
 from models import NextBeat
-from run import top10
+from run import top10, windowed_active_dislikes
 
 ROOT = Path(__file__).parent / 'artifacts'
 st.set_page_config(page_title='NextBeat', page_icon='🎧', layout='wide')
@@ -66,6 +66,7 @@ if edit != 'Keep recorded event':
                 'Dislike': [0,0,0,1,0,0], 'Short listen': [.1,1,0,0,0,0]}[edit]
     st.info('This is an explicitly edited what-if input. It does not change the recorded data or evaluation scores.')
 if st.button('Recommend next tracks', type='primary'):
+    blocked = [windowed_active_dislikes(x[0], f[0])]
     if choice in models:
         with torch.no_grad():
             scores = models[choice].scores(torch.tensor(x, dtype=torch.long), torch.tensor(f, dtype=torch.float32)).numpy()
@@ -74,7 +75,7 @@ if st.button('Recommend next tracks', type='primary'):
         scores += data['counts'][None] / data['counts'].max() * 1e-6
     else:
         scores = data['counts'][None].copy()
-    ranking = top10(scores)[0]
+    ranking = top10(scores, blocked)[0]
     st.dataframe(pd.DataFrame({'rank': range(1,11), 'track': [track(j) for j in ranking],
                                'score': scores[0, ranking]}), hide_index=True)
     st.caption('Scores rank tracks within a model; they are not calibrated probabilities or comparable across models.')

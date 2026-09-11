@@ -6,7 +6,7 @@ import scipy.sparse as sp
 import torch
 from fastapi import FastAPI, HTTPException
 from models import NextBeat
-from run import top10
+from run import top10, windowed_active_dislikes
 
 app = FastAPI(title='NextBeat', version='1.0.0')
 ROOT = Path(__file__).parent / 'artifacts'
@@ -50,6 +50,7 @@ def recommend(uid: int):
     if len(ix) == 0:
         raise HTTPException(404, 'Anonymous user is not in the saved evaluation cohort.')
     i = int(ix[0])
+    blocked = [windowed_active_dislikes(data['x'][i], data['f'][i])]
     if selected == 'Most Popular':
         scores = data['counts'][None].copy()
     elif selected == 'ItemKNN':
@@ -60,6 +61,6 @@ def recommend(uid: int):
         with torch.no_grad():
             scores = model.scores(torch.tensor(data['x'][i:i+1], dtype=torch.long),
                                   torch.tensor(data['f'][i:i+1], dtype=torch.float32)).numpy()
-    ranking = top10(scores)[0]
+    ranking = top10(scores, blocked)[0]
     return {'uid': uid, 'model': selected, 'recommendations': [
         {'track_id': int(data['vocab'][j-2]), 'score': float(scores[0,j])} for j in ranking]}
