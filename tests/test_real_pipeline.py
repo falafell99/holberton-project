@@ -73,3 +73,22 @@ def test_same_timestamp_feedback_is_excluded():
     assert q['y'].tolist() == [4]
     assert q['x'][0,-1] == 2
     assert 3 not in q['x'][0]
+
+
+def test_windowed_active_dislikes_tracks_reversal():
+    from run import windowed_active_dislikes
+    items = np.array([0, 2, 3, 2])
+    f = np.zeros((4, 6))
+    f[1, 3] = 1  # dislike item 2
+    f[2, 3] = 1  # dislike item 3
+    f[3, 5] = 1  # undislike item 2 (reappears in the window, so it's un-disliked)
+    result = windowed_active_dislikes(items, f)
+    assert result.tolist() == [3]
+
+
+def test_windowed_active_dislikes_ignores_padding():
+    from run import windowed_active_dislikes
+    items = np.array([0, 0, 0, 2])
+    f = np.zeros((4, 6))
+    f[3, 3] = 1
+    assert windowed_active_dislikes(items, f).tolist() == [2]

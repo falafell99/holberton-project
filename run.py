@@ -125,6 +125,21 @@ def active_dislikes(data, positions):
     return result
 
 
+def windowed_active_dislikes(items, features):
+    """Same active-set logic as active_dislikes(), scoped to one fixed-length
+    context window (items/features rows as stored in demo.npz), for live inference."""
+    active = set()
+    for item, row in zip(items, features):
+        item = int(item)
+        if item == 0:
+            continue
+        if row[3] == 1:
+            active.add(item)
+        elif row[5] == 1:
+            active.discard(item)
+    return np.array(sorted(active), dtype=np.int32)
+
+
 def top10(scores, blocked=None):
     scores[:, :2] = -np.inf
     if blocked is not None:
