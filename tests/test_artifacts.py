@@ -30,6 +30,32 @@ def test_api_real_user_and_unknown_user():
     assert client.get('/recommend/-1').status_code == 404
 
 
+def test_api_recommend_endpoint_never_returns_an_active_dislike():
+    """Exercises the actual /recommend/{uid} wiring in api.py, not a re-implementation of it."""
+    from fastapi.testclient import TestClient
+    from api import app
+    from run import windowed_active_dislikes
+    client = TestClient(app)
+    data = np.load(ROOT / 'demo.npz')
+    uids = client.get('/users').json()['anonymous_user_ids']
+    checked = 0
+    for uid in uids:
+        i = int(np.flatnonzero(data['uid'] == uid)[0])
+        blocked = windowed_active_dislikes(data['x'][i], data['f'][i])
+        if len(blocked) == 0:
+            continue
+        checked += 1
+        response = client.get(f'/recommend/{uid}')
+        assert response.status_code == 200
+        recommended = {r['track_id'] for r in response.json()['recommendations']}
+        # /recommend returns real vocab track ids, but windowed_active_dislikes() returns
+        # internal item ids (data['x'] space) — map blocked ids into vocab space to compare.
+        blocked_track_ids = {int(data['vocab'][item_id - 2]) for item_id in blocked.tolist()}
+        assert recommended.isdisjoint(blocked_track_ids), f'user {uid} was recommended a disliked track'
+    if checked == 0:
+        pytest.skip('No demo.npz user has an active dislike — test is not exercising anything')
+
+
 def test_streamlit_real_prediction():
     from streamlit.testing.v1 import AppTest
     at = AppTest.from_file(str(ROOT.parent / 'app.py')).run(timeout=30)
