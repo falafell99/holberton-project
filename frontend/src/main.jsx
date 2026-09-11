@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
-import { getUsers, getModels, getHistory } from './api'
+import { getUsers, getModels, getHistory, postRecommend } from './api'
 import UserSelect from './components/UserSelect'
 import ModelSelect from './components/ModelSelect'
 import HistoryTable from './components/HistoryTable'
+import WhatIfPicker from './components/WhatIfPicker'
+import RecommendationsTable from './components/RecommendationsTable'
 import './styles.css'
 
 function App() {
@@ -13,6 +15,13 @@ function App() {
   const [user, setUser] = useState(null)
   const [model, setModel] = useState(null)
   const [history, setHistory] = useState([])
+  const [whatIf, setWhatIf] = useState('keep')
+  const [recommendations, setRecommendations] = useState([])
+
+  async function handleRecommend() {
+    const body = await postRecommend(user, { model, what_if: whatIf })
+    setRecommendations(body.recommendations)
+  }
 
   useEffect(() => {
     getUsers().then((body) => {
@@ -38,10 +47,16 @@ function App() {
         <h2>Selection</h2>
         <UserSelect users={users} value={user} onChange={setUser} />
         <ModelSelect models={modelList} defaultModel={defaultModel} value={model} onChange={setModel} />
+        <WhatIfPicker value={whatIf} onChange={setWhatIf} />
+        <button className="primary-button" onClick={handleRecommend}>Recommend next tracks</button>
       </div>
       <div className="card">
         <h2>Recent real history</h2>
         <HistoryTable rows={history} />
+      </div>
+      <div className="card">
+        <h2>Recommended next tracks</h2>
+        <RecommendationsTable recommendations={recommendations} />
       </div>
     </div>
   )
