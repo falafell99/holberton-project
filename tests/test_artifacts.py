@@ -179,12 +179,29 @@ def test_post_recommend_what_if_dislike_changes_ranking_and_stays_outside_record
     from fastapi.testclient import TestClient
     from api import app
     client = TestClient(app)
-    uid = client.get('/users').json()['anonymous_user_ids'][0]
+    archive = np.load(ROOT / 'demo.npz')
+    data = {k: archive[k] for k in archive.files}
+    # Find a user whose last (most recent) event slot — the one the 'dislike' what-if
+    # edit targets, matching api.py's `f[0, -1] = edit` — is a real in-catalogue item.
+    disliked_uid = None
+    disliked_track_id = None
+    for i, uid in enumerate(data['uid'].tolist()):
+        item = int(data['x'][i, -1])
+        if item >= 2:
+            disliked_uid = int(uid)
+            disliked_track_id = int(data['vocab'][item - 2])
+            break
+    assert disliked_uid is not None, 'No demo.npz user has a real in-catalogue last item'
+
     before = (ROOT / 'demo.npz').read_bytes()
-    keep = client.post(f'/recommend/{uid}', json={'model': 'NextBeat', 'what_if': 'keep'})
-    dislike = client.post(f'/recommend/{uid}', json={'model': 'NextBeat', 'what_if': 'dislike'})
+    keep = client.post(f'/recommend/{disliked_uid}', json={'model': 'NextBeat', 'what_if': 'keep'})
+    dislike = client.post(f'/recommend/{disliked_uid}', json={'model': 'NextBeat', 'what_if': 'dislike'})
     assert keep.status_code == 200 and dislike.status_code == 200
     assert len(dislike.json()['recommendations']) == 10
+    dislike_track_ids = {r['track_id'] for r in dislike.json()['recommendations']}
+    assert disliked_track_id not in dislike_track_ids, (
+        f'track {disliked_track_id} was recommended right after being marked disliked'
+    )
     assert (ROOT / 'demo.npz').read_bytes() == before
 
 
