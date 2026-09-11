@@ -150,3 +150,71 @@ def test_metrics_endpoint_reports_all_four_models():
     manifest = json.loads((ROOT / 'manifest.json').read_text())
     assert body['eligible_targets'] == manifest['test_users']
     assert body['total_targets'] == body['metrics']['NextBeat']['all_target_users']
+
+
+def test_post_recommend_defaults_match_get_recommend():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    uid = client.get('/users').json()['anonymous_user_ids'][0]
+    get_response = client.get(f'/recommend/{uid}')
+    post_response = client.post(f'/recommend/{uid}', json={})
+    assert post_response.status_code == 200
+    assert post_response.json()['model'] == get_response.json()['model']
+    assert len(post_response.json()['recommendations']) == 10
+
+
+def test_post_recommend_accepts_explicit_model_choice():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    uid = client.get('/users').json()['anonymous_user_ids'][0]
+    response = client.post(f'/recommend/{uid}', json={'model': 'Most Popular'})
+    assert response.status_code == 200
+    assert response.json()['model'] == 'Most Popular'
+    assert len(response.json()['recommendations']) == 10
+
+
+def test_post_recommend_what_if_dislike_changes_ranking_and_stays_outside_recorded_data():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    uid = client.get('/users').json()['anonymous_user_ids'][0]
+    before = (ROOT / 'demo.npz').read_bytes()
+    keep = client.post(f'/recommend/{uid}', json={'model': 'NextBeat', 'what_if': 'keep'})
+    dislike = client.post(f'/recommend/{uid}', json={'model': 'NextBeat', 'what_if': 'dislike'})
+    assert keep.status_code == 200 and dislike.status_code == 200
+    assert len(dislike.json()['recommendations']) == 10
+    assert (ROOT / 'demo.npz').read_bytes() == before
+
+
+def test_post_recommend_rejects_unknown_what_if():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    uid = client.get('/users').json()['anonymous_user_ids'][0]
+    response = client.post(f'/recommend/{uid}', json={'what_if': 'not-a-real-option'})
+    assert response.status_code == 422
+
+
+def test_post_recommend_never_returns_an_active_dislike():
+    from fastapi.testclient import TestClient
+    from run import windowed_active_dislikes
+    from api import app
+    client = TestClient(app)
+    archive = np.load(ROOT / 'demo.npz')
+    data = {k: archive[k] for k in archive.files}
+    checked = 0
+    for i, uid in enumerate(data['uid'].tolist()):
+        blocked = windowed_active_dislikes(data['x'][i], data['f'][i])
+        if len(blocked) == 0:
+            continue
+        checked += 1
+        for model_name in ['NextBeat', 'Sequence-only GRU', 'ItemKNN', 'Most Popular']:
+            response = client.post(f'/recommend/{uid}', json={'model': model_name})
+            track_ids = {rec['track_id'] for rec in response.json()['recommendations']}
+            blocked_track_ids = {int(data['vocab'][b - 2]) for b in blocked if b >= 2}
+            assert track_ids.isdisjoint(blocked_track_ids), f'{model_name} recommended a disliked track for uid {uid}'
+        if checked >= 5:
+            break
+    assert checked > 0, 'No demo.npz users had an active dislike — test is not exercising anything'

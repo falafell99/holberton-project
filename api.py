@@ -83,6 +83,47 @@ def users():
     return {'anonymous_user_ids': data['uid'].tolist()}
 
 
+WHAT_IF_EDITS = {
+    'keep': None,
+    'full_listen': [1, 1, 0, 0, 0, 0],
+    'like': [0, 0, 1, 0, 0, 0],
+    'dislike': [0, 0, 0, 1, 0, 0],
+    'short_listen': [.1, 1, 0, 0, 0, 0],
+}
+
+
+class RecommendRequest(BaseModel):
+    model: str | None = None
+    what_if: str = 'keep'
+
+
+def score_and_rank(data, model_obj, model_name, x, f):
+    blocked = [windowed_active_dislikes(x[0], f[0])]
+    if model_name == 'Most Popular':
+        scores = data['counts'][None].copy()
+    elif model_name == 'ItemKNN':
+        seen = x[0][x[0] >= 2]
+        scores = np.asarray(model_obj[seen].sum(axis=0)) if len(seen) else data['counts'][None].copy()
+        scores = scores + data['counts'][None] / data['counts'].max() * 1e-6
+    else:
+        with torch.no_grad():
+            scores = model_obj.scores(torch.tensor(x, dtype=torch.long), torch.tensor(f, dtype=torch.float32)).numpy()
+    ranking = top10(scores, blocked)[0]
+    return [{'track_id': int(data['vocab'][j-2]), 'score': float(scores[0, j])} for j in ranking]
+
+
+def model_for(name, n_items):
+    if name in ['NextBeat', 'Sequence-only GRU']:
+        model = NextBeat(n_items, feedback=name == 'NextBeat')
+        filename = 'nextbeat.pt' if name == 'NextBeat' else 'sequence.pt'
+        model.load_state_dict(torch.load(ROOT / filename, map_location='cpu', weights_only=True))
+        model.eval()
+        return model
+    if name == 'ItemKNN':
+        return sp.load_npz(ROOT / 'itemknn.npz')
+    return None
+
+
 @app.get('/recommend/{uid}')
 def recommend(uid: int):
     data, model, selected = resources()
@@ -90,17 +131,26 @@ def recommend(uid: int):
     if len(ix) == 0:
         raise HTTPException(404, 'Anonymous user is not in the saved evaluation cohort.')
     i = int(ix[0])
-    blocked = [windowed_active_dislikes(data['x'][i], data['f'][i])]
-    if selected == 'Most Popular':
-        scores = data['counts'][None].copy()
-    elif selected == 'ItemKNN':
-        x = data['x'][i]
-        scores = np.asarray(model[x[x >= 2]].sum(axis=0))
-        scores += data['counts'][None] / data['counts'].max() * 1e-6
-    else:
-        with torch.no_grad():
-            scores = model.scores(torch.tensor(data['x'][i:i+1], dtype=torch.long),
-                                  torch.tensor(data['f'][i:i+1], dtype=torch.float32)).numpy()
-    ranking = top10(scores, blocked)[0]
-    return {'uid': uid, 'model': selected, 'recommendations': [
-        {'track_id': int(data['vocab'][j-2]), 'score': float(scores[0,j])} for j in ranking]}
+    recommendations = score_and_rank(data, model, selected, data['x'][i:i+1], data['f'][i:i+1])
+    return {'uid': uid, 'model': selected, 'recommendations': recommendations}
+
+
+@app.post('/recommend/{uid}')
+def recommend_with_options(uid: int, body: RecommendRequest):
+    data, cached_model, selected = resources()
+    ix = np.flatnonzero(data['uid'] == uid)
+    if len(ix) == 0:
+        raise HTTPException(404, 'Anonymous user is not in the saved evaluation cohort.')
+    if body.what_if not in WHAT_IF_EDITS:
+        raise HTTPException(422, f'Unknown what_if option: {body.what_if}')
+    i = int(ix[0])
+    model_name = body.model or selected
+    if model_name not in ['NextBeat', 'Sequence-only GRU', 'ItemKNN', 'Most Popular']:
+        raise HTTPException(422, f'Unknown model: {model_name}')
+    model_obj = cached_model if model_name == selected else model_for(model_name, len(data['counts']))
+    x, f = data['x'][i:i+1].copy(), data['f'][i:i+1].copy()
+    edit = WHAT_IF_EDITS[body.what_if]
+    if edit is not None:
+        f[0, -1] = edit
+    recommendations = score_and_rank(data, model_obj, model_name, x, f)
+    return {'uid': uid, 'model': model_name, 'recommendations': recommendations}
