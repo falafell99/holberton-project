@@ -3,3 +3,5 @@ artifacts/prepared.npz
 __pycache__
 .pytest_cache
 .venv
+frontend/node_modules
+frontend/dist
