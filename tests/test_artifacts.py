@@ -134,3 +134,19 @@ def test_history_endpoint_unknown_user_404s():
     from api import app
     client = TestClient(app)
     assert client.get('/history/-1').status_code == 404
+
+
+def test_metrics_endpoint_reports_all_four_models():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    response = client.get('/metrics')
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body['metrics']) == {'Most Popular', 'ItemKNN', 'Sequence-only GRU', 'NextBeat'}
+    for row in body['metrics'].values():
+        assert set(row) == {'recall10', 'ndcg10', 'unconditional_recall10', 'coverage10',
+                            'novelty10', 'nfvr10', 'evaluated_users', 'all_target_users'}
+    manifest = json.loads((ROOT / 'manifest.json').read_text())
+    assert body['eligible_targets'] == manifest['test_users']
+    assert body['total_targets'] == body['metrics']['NextBeat']['all_target_users']

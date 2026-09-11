@@ -69,6 +69,14 @@ def history(uid: int):
     return {'uid': uid, 'history': rows}
 
 
+@app.get('/metrics')
+def metrics():
+    report = json.loads((ROOT / 'results.json').read_text())
+    manifest = json.loads((ROOT / 'manifest.json').read_text())
+    return {'metrics': report, 'eligible_targets': manifest['test_users'],
+            'total_targets': report['NextBeat']['all_target_users']}
+
+
 @app.get('/users')
 def users():
     data, _, _ = resources()
