@@ -1,7 +1,11 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 from models import NextBeat
 from run import contexts, queries, active_dislikes, top10, metrics
+
+ROOT = Path(__file__).resolve().parents[1] / 'artifacts'
 
 
 def test_context_does_not_cross_users_or_include_target():
@@ -118,3 +122,11 @@ def test_knn_ranks_respects_blocked():
     blocked_id = int(unblocked[0, 0])
     ranks = knn_ranks(knn, q, counts, blocked=[np.array([blocked_id])])
     assert blocked_id not in ranks[0].tolist()
+
+
+def test_evaluate_stage_is_registered_in_cli():
+    import subprocess
+    import sys
+    result = subprocess.run([sys.executable, 'run.py', '--help'], capture_output=True, text=True,
+                            cwd=str(ROOT.parent))
+    assert 'evaluate' in result.stdout

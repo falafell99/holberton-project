@@ -298,9 +298,36 @@ def train(args):
     print(json.dumps(results, indent=2), flush=True)
 
 
+def evaluate(args):
+    """Recompute results.json from already-trained weights. Never trains."""
+    out = Path(args.out)
+    data = np.load(out / 'prepared.npz')
+    data = {k: data[k] for k in data.files}
+    new_time = np.r_[True, (data['uid'][1:] != data['uid'][:-1]) | (data['ts'][1:] != data['ts'][:-1])]
+    data['prefix'] = np.maximum.accumulate(np.where(new_time, np.arange(len(new_time)), 0))
+    manifest = json.loads((out / 'manifest.json').read_text())
+    t1, t2 = manifest['cutoffs']
+    test = queries(data, t2, np.iinfo(np.uint32).max)
+    blocked = active_dislikes(data, data['prefix'][test['positions']])
+    counts = data['counts']
+    results = {}
+    pop = top10(np.tile(counts, (len(test['y']), 1)), blocked)
+    results['Most Popular'] = metrics(pop, test, counts, blocked)
+    knn = sp.load_npz(out / 'itemknn.npz')
+    results['ItemKNN'] = metrics(knn_ranks(knn, test, counts, blocked), test, counts, blocked)
+    for feedback, filename, name in [(False, 'sequence.pt', 'Sequence-only GRU'),
+                                      (True, 'nextbeat.pt', 'NextBeat')]:
+        model = NextBeat(len(counts), feedback=feedback)
+        model.load_state_dict(torch.load(out / filename, map_location='cpu', weights_only=True))
+        model.eval()
+        results[name] = metrics(neural_ranks(model, test, blocked), test, counts, blocked)
+    (out / 'results.json').write_text(json.dumps(results, indent=2))
+    print(json.dumps(results, indent=2), flush=True)
+
+
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('stage', choices=['prepare', 'train'])
+    p.add_argument('stage', choices=['prepare', 'train', 'evaluate'])
     p.add_argument('--raw', default='data/raw/multi_event.parquet')
     p.add_argument('--out', default='artifacts')
     p.add_argument('--users', type=int, default=2500)
@@ -319,5 +346,7 @@ if __name__ == '__main__':
         from filelock import FileLock
         with FileLock(str(Path(a.out) / '.training.lock')):
             train(a)
+    elif a.stage == 'evaluate':
+        evaluate(a)
     else:
         prepare(a)
