@@ -67,28 +67,32 @@ function App() {
     <div className="app">
       <h1>NextBeat</h1>
       <p className="subtitle">Real Yambda listening histories · trained recommendation models · anonymous track IDs</p>
-      {error && <p className="card" style={{color: '#f87171'}}>Error: {error} — the backend may be waking up (cold starts can take ~40s on the free tier), try again in a moment.</p>}
-      <div className="card">
-        <h2>Selection</h2>
+      {error && (
+        <p className="error-banner">
+          {error} — the backend may be waking up (cold starts can take ~40s on the free tier), try again in a moment.
+        </p>
+      )}
+      <section className="block">
+        <div className="eyebrow"><span className="index">01</span><span className="label">Select</span></div>
         <UserSelect users={users} value={user} onChange={setUser} />
         <ModelSelect models={modelList} defaultModel={defaultModel} value={model} onChange={setModel} />
         <WhatIfPicker value={whatIf} onChange={setWhatIf} />
         <button className="primary-button" onClick={handleRecommend} disabled={!user || loading}>
           {loading ? 'Loading…' : 'Recommend next tracks'}
         </button>
-      </div>
-      <div className="card">
-        <h2>Recent real history</h2>
+      </section>
+      <section className="block">
+        <div className="eyebrow"><span className="index">02</span><span className="label">History</span></div>
         <HistoryTable rows={history} />
-      </div>
-      <div className="card">
-        <h2>Recommended next tracks</h2>
+      </section>
+      <section className="block">
+        <div className="eyebrow"><span className="index">03</span><span className="label">Result</span></div>
         <RecommendationsTable recommendations={recommendations} />
-      </div>
-      <div className="card">
-        <h2>Frozen-model test results</h2>
+      </section>
+      <section className="block">
+        <div className="eyebrow"><span className="index">04</span><span className="label">Benchmark</span></div>
         <MetricsPanel metrics={metrics} eligibleTargets={eligibleTargets} totalTargets={totalTargets} />
-      </div>
+      </section>
     </div>
   )
 }
