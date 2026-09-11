@@ -125,6 +125,9 @@ def active_dislikes(data, positions):
     return result
 
 
+# Scope gap vs active_dislikes(): only sees the last 20 events in demo.npz, so a
+# dislike further back than the serving window will not be filtered live, even
+# though the batch/evaluate NFVR metric (computed against full history) reports 0%.
 def windowed_active_dislikes(items, features):
     """Same active-set logic as active_dislikes(), scoped to one fixed-length
     context window (items/features rows as stored in demo.npz), for live inference."""
@@ -300,6 +303,7 @@ def train(args):
 
 def evaluate(args):
     """Recompute results.json from already-trained weights. Never trains."""
+    torch.set_num_threads(args.threads)
     out = Path(args.out)
     data = np.load(out / 'prepared.npz')
     data = {k: data[k] for k in data.files}
