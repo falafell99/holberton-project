@@ -1,0 +1,10 @@
+{
+  "nextbeat_minus_sequence_ndcg10": 0.0010621632081714498,
+  "paired_user_bootstrap_95_percent": [
+    -0.007737183294143579,
+    0.009648504632359079
+  ],
+  "replicates": 2000,
+  "seed": 42,
+  "scope": "User sampling uncertainty only; not training-seed variance"
+}

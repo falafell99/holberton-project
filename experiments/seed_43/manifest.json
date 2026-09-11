@@ -1,0 +1,71 @@
+{
+  "source": "https://huggingface.co/datasets/yandex/yambda",
+  "revision": "dd6f3a19eef5866e346c3270e098baa641a44948",
+  "source_sha256": "b92f6c97277a554c8a7d6cfea900eca51639fd53a3e6c4fa58b82e35fd35804d",
+  "audit": {
+    "rows": 47790449,
+    "users": 10000,
+    "min_time": 0,
+    "max_time": 26000000
+  },
+  "seed": 42,
+  "selected_users": 2500,
+  "selected_events": 11763348,
+  "train_events": 8590059,
+  "train_positive_targets": 2837914,
+  "catalog": 10000,
+  "cutoffs": [
+    20800000,
+    23400000
+  ],
+  "sequence_length": 20,
+  "timestamp_units": "Original Yambda globally ordered five-second bins; no invented UTC dates",
+  "cohort": "Seeded users with all their events; no random row deletion",
+  "candidate_policy": "Train-only top catalogue; repeats allowed; OOV targets counted separately",
+  "event_counts": [
+    {
+      "event_type": "undislike",
+      "len": 5320
+    },
+    {
+      "event_type": "listen",
+      "len": 11429458
+    },
+    {
+      "event_type": "like",
+      "len": 219679
+    },
+    {
+      "event_type": "dislike",
+      "len": 21768
+    },
+    {
+      "event_type": "unlike",
+      "len": 87123
+    }
+  ],
+  "training": {
+    "stage": "train",
+    "raw": "data/raw/multi_event.parquet",
+    "out": "/workspace/scratch/f1858a4fb661/nextbeat_real/experiments/seed_43",
+    "users": 2500,
+    "catalog": 10000,
+    "seed": 43,
+    "epochs": 3,
+    "examples": 1000000,
+    "all_targets": true,
+    "resume": true,
+    "threads": 4
+  },
+  "strict_time_train_targets": 2837655,
+  "tie_policy": "Exclude every event with timestamp equal to the target timestamp from its input",
+  "validation_ndcg10": {
+    "Most Popular": 0.016088974796915092,
+    "ItemKNN": 0.028820617899230357,
+    "Sequence-only GRU": 0.05998927722707491,
+    "NextBeat": 0.06140141888404024
+  },
+  "selected_model_by_validation": "NextBeat",
+  "validation_users": 975,
+  "test_users": 994
+}

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
+data/
+artifacts/prepared.npz
+node_modules/
+frontend/dist/
+.env
+.env.local

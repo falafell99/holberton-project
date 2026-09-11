@@ -1,0 +1,65 @@
+"""Read-only API for the trained NextBeat model; anonymous IDs only."""
+from pathlib import Path
+import json
+import numpy as np
+import scipy.sparse as sp
+import torch
+from fastapi import FastAPI, HTTPException
+from models import NextBeat
+from run import top10
+
+app = FastAPI(title='NextBeat', version='1.0.0')
+ROOT = Path(__file__).parent / 'artifacts'
+cache = None
+
+
+def resources():
+    global cache
+    if cache is None:
+        archive = np.load(ROOT / 'demo.npz')
+        data = {k: archive[k] for k in archive.files}
+        selected = json.loads((ROOT/'manifest.json').read_text())['selected_model_by_validation']
+        model = None
+        if selected in ['NextBeat', 'Sequence-only GRU']:
+            model = NextBeat(len(data['counts']), feedback=selected == 'NextBeat')
+            filename = 'nextbeat.pt' if selected == 'NextBeat' else 'sequence.pt'
+            model.load_state_dict(torch.load(ROOT / filename, map_location='cpu', weights_only=True))
+            model.eval()
+        elif selected == 'ItemKNN':
+            model = sp.load_npz(ROOT/'itemknn.npz')
+        torch.set_num_threads(2)
+        cache = data, model, selected
+    return cache
+
+
+@app.get('/health')
+def health():
+    return {'ready': (ROOT / 'nextbeat.pt').exists() and (ROOT / 'demo.npz').exists()}
+
+
+@app.get('/users')
+def users():
+    data, _, _ = resources()
+    return {'anonymous_user_ids': data['uid'].tolist()}
+
+
+@app.get('/recommend/{uid}')
+def recommend(uid: int):
+    data, model, selected = resources()
+    ix = np.flatnonzero(data['uid'] == uid)
+    if len(ix) == 0:
+        raise HTTPException(404, 'Anonymous user is not in the saved evaluation cohort.')
+    i = int(ix[0])
+    if selected == 'Most Popular':
+        scores = data['counts'][None].copy()
+    elif selected == 'ItemKNN':
+        x = data['x'][i]
+        scores = np.asarray(model[x[x >= 2]].sum(axis=0))
+        scores += data['counts'][None] / data['counts'].max() * 1e-6
+    else:
+        with torch.no_grad():
+            scores = model.scores(torch.tensor(data['x'][i:i+1], dtype=torch.long),
+                                  torch.tensor(data['f'][i:i+1], dtype=torch.float32)).numpy()
+    ranking = top10(scores)[0]
+    return {'uid': uid, 'model': selected, 'recommendations': [
+        {'track_id': int(data['vocab'][j-2]), 'score': float(scores[0,j])} for j in ranking]}

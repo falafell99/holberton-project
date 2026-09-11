@@ -1,0 +1,9 @@
+{
+  "cohort_seed": 42,
+  "training_seed": 44,
+  "prepared_sha256": "f85a8f9c2a4f3646ee54001cf32718566a543ee2b648cf8bb1940da2c908f09d",
+  "epochs": 3,
+  "all_targets": true,
+  "selection": "validation NDCG@10",
+  "purpose": "Fixed-split training-seed sensitivity; not a fresh test set"
+}

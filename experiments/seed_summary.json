@@ -1,0 +1,299 @@
+{
+  "runs": [
+    {
+      "seed": 42,
+      "results": {
+        "Most Popular": {
+          "recall10": 0.04124748490945674,
+          "ndcg10": 0.015846073667722803,
+          "unconditional_recall10": 0.018393898609241812,
+          "coverage10": 0.001,
+          "novelty10": 9.432900428771973,
+          "nfvr10": 0.006841046277665996,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "ItemKNN": {
+          "recall10": 0.04426559356136821,
+          "ndcg10": 0.022280158112043796,
+          "unconditional_recall10": 0.01973979362943024,
+          "coverage10": 0.2462,
+          "novelty10": 11.5578031539917,
+          "nfvr10": 0.003118712273641851,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "Sequence-only GRU": {
+          "recall10": 0.096579476861167,
+          "ndcg10": 0.05566110402005049,
+          "unconditional_recall10": 0.04306864064602961,
+          "coverage10": 0.2846,
+          "novelty10": 11.969996452331543,
+          "nfvr10": 0.002716297786720322,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "NextBeat": {
+          "recall10": 0.1096579476861167,
+          "ndcg10": 0.05672326722822194,
+          "unconditional_recall10": 0.048900852400179454,
+          "coverage10": 0.2869,
+          "novelty10": 11.944375991821289,
+          "nfvr10": 0.003118712273641851,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        }
+      },
+      "validation": {
+        "Most Popular": 0.016088974796915092,
+        "ItemKNN": 0.028820617899230357,
+        "Sequence-only GRU": 0.06155226479431849,
+        "NextBeat": 0.06623746262332682
+      }
+    },
+    {
+      "seed": 43,
+      "results": {
+        "Most Popular": {
+          "recall10": 0.04124748490945674,
+          "ndcg10": 0.015846073667722803,
+          "unconditional_recall10": 0.018393898609241812,
+          "coverage10": 0.001,
+          "novelty10": 9.432900428771973,
+          "nfvr10": 0.006841046277665996,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "ItemKNN": {
+          "recall10": 0.04426559356136821,
+          "ndcg10": 0.022280158112043796,
+          "unconditional_recall10": 0.01973979362943024,
+          "coverage10": 0.2462,
+          "novelty10": 11.5578031539917,
+          "nfvr10": 0.003118712273641851,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "Sequence-only GRU": {
+          "recall10": 0.08350100603621731,
+          "ndcg10": 0.04813570479712507,
+          "unconditional_recall10": 0.037236428891879766,
+          "coverage10": 0.289,
+          "novelty10": 12.037781715393066,
+          "nfvr10": 0.0029175050301810867,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "NextBeat": {
+          "recall10": 0.096579476861167,
+          "ndcg10": 0.05150610319691316,
+          "unconditional_recall10": 0.04306864064602961,
+          "coverage10": 0.2384,
+          "novelty10": 11.714953422546387,
+          "nfvr10": 0.0032193158953722333,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        }
+      },
+      "validation": {
+        "Most Popular": 0.016088974796915092,
+        "ItemKNN": 0.028820617899230357,
+        "Sequence-only GRU": 0.05998927722707491,
+        "NextBeat": 0.06140141888404024
+      }
+    },
+    {
+      "seed": 44,
+      "results": {
+        "Most Popular": {
+          "recall10": 0.04124748490945674,
+          "ndcg10": 0.015846073667722803,
+          "unconditional_recall10": 0.018393898609241812,
+          "coverage10": 0.001,
+          "novelty10": 9.432900428771973,
+          "nfvr10": 0.006841046277665996,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "ItemKNN": {
+          "recall10": 0.04426559356136821,
+          "ndcg10": 0.022280158112043796,
+          "unconditional_recall10": 0.01973979362943024,
+          "coverage10": 0.2462,
+          "novelty10": 11.5578031539917,
+          "nfvr10": 0.003118712273641851,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "Sequence-only GRU": {
+          "recall10": 0.09959758551307847,
+          "ndcg10": 0.05425430413407325,
+          "unconditional_recall10": 0.04441453566621804,
+          "coverage10": 0.2891,
+          "novelty10": 12.007887840270996,
+          "nfvr10": 0.0026156941649899397,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        },
+        "NextBeat": {
+          "recall10": 0.096579476861167,
+          "ndcg10": 0.052728208881703584,
+          "unconditional_recall10": 0.04306864064602961,
+          "coverage10": 0.2768,
+          "novelty10": 11.901979446411133,
+          "nfvr10": 0.004124748490945674,
+          "evaluated_users": 994,
+          "all_target_users": 2229
+        }
+      },
+      "validation": {
+        "Most Popular": 0.016088974796915092,
+        "ItemKNN": 0.028820617899230357,
+        "Sequence-only GRU": 0.06428153676308293,
+        "NextBeat": 0.06648454922410335
+      }
+    }
+  ],
+  "aggregate": {
+    "Most Popular": {
+      "recall10": {
+        "mean": 0.04124748490945674,
+        "std": 0.0
+      },
+      "ndcg10": {
+        "mean": 0.015846073667722803,
+        "std": 0.0
+      },
+      "unconditional_recall10": {
+        "mean": 0.018393898609241812,
+        "std": 0.0
+      },
+      "coverage10": {
+        "mean": 0.001,
+        "std": 0.0
+      },
+      "novelty10": {
+        "mean": 9.432900428771973,
+        "std": 0.0
+      },
+      "nfvr10": {
+        "mean": 0.006841046277665995,
+        "std": 1.0622968402425924e-18
+      },
+      "evaluated_users": {
+        "mean": 994.0,
+        "std": 0.0
+      },
+      "all_target_users": {
+        "mean": 2229.0,
+        "std": 0.0
+      }
+    },
+    "ItemKNN": {
+      "recall10": {
+        "mean": 0.0442655935613682,
+        "std": 8.498374721940739e-18
+      },
+      "ndcg10": {
+        "mean": 0.022280158112043796,
+        "std": 0.0
+      },
+      "unconditional_recall10": {
+        "mean": 0.01973979362943024,
+        "std": 0.0
+      },
+      "coverage10": {
+        "mean": 0.2462,
+        "std": 0.0
+      },
+      "novelty10": {
+        "mean": 11.5578031539917,
+        "std": 0.0
+      },
+      "nfvr10": {
+        "mean": 0.003118712273641851,
+        "std": 0.0
+      },
+      "evaluated_users": {
+        "mean": 994.0,
+        "std": 0.0
+      },
+      "all_target_users": {
+        "mean": 2229.0,
+        "std": 0.0
+      }
+    },
+    "Sequence-only GRU": {
+      "recall10": {
+        "mean": 0.09322602280348759,
+        "std": 0.008556237975971204
+      },
+      "ndcg10": {
+        "mean": 0.05268370431708294,
+        "std": 0.004000999400768405
+      },
+      "unconditional_recall10": {
+        "mean": 0.04157320173470914,
+        "std": 0.003815567764968768
+      },
+      "coverage10": {
+        "mean": 0.2875666666666667,
+        "std": 0.002569695182961061
+      },
+      "novelty10": {
+        "mean": 12.005222002665201,
+        "std": 0.033971171450000566
+      },
+      "nfvr10": {
+        "mean": 0.002749832327297116,
+        "std": 0.0001536745705887271
+      },
+      "evaluated_users": {
+        "mean": 994.0,
+        "std": 0.0
+      },
+      "all_target_users": {
+        "mean": 2229.0,
+        "std": 0.0
+      }
+    },
+    "NextBeat": {
+      "recall10": {
+        "mean": 0.10093896713615023,
+        "std": 0.007550858651373376
+      },
+      "ndcg10": {
+        "mean": 0.05365252643561289,
+        "std": 0.002728639283185706
+      },
+      "unconditional_recall10": {
+        "mean": 0.04501271123074622,
+        "std": 0.003367229026229312
+      },
+      "coverage10": {
+        "mean": 0.2673666666666667,
+        "std": 0.02558912529441624
+      },
+      "novelty10": {
+        "mean": 11.853769620259603,
+        "std": 0.12207300818094431
+      },
+      "nfvr10": {
+        "mean": 0.003487592219986586,
+        "std": 0.0005540815439925656
+      },
+      "evaluated_users": {
+        "mean": 994.0,
+        "std": 0.0
+      },
+      "all_target_users": {
+        "mean": 2229.0,
+        "std": 0.0
+      }
+    }
+  },
+  "short_conclusion_en": "NextBeat has higher NDCG in 2/3 training seeds.",
+  "short_conclusion_az": "NextBeat 2/3 seed-də daha yüksək NDCG göstərir.",
+  "interpretation": "Three training seeds on one previously inspected split; descriptive stability evidence, not independent generalization proof.",
+  "serving_policy": "Keep the original seed-42 validation-selected model; do not select a seed using test scores."
+}

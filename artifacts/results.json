@@ -1,0 +1,42 @@
+{
+  "Most Popular": {
+    "recall10": 0.04124748490945674,
+    "ndcg10": 0.015846073667722803,
+    "unconditional_recall10": 0.018393898609241812,
+    "coverage10": 0.001,
+    "novelty10": 9.432900428771973,
+    "nfvr10": 0.006841046277665996,
+    "evaluated_users": 994,
+    "all_target_users": 2229
+  },
+  "ItemKNN": {
+    "recall10": 0.04426559356136821,
+    "ndcg10": 0.022280158112043796,
+    "unconditional_recall10": 0.01973979362943024,
+    "coverage10": 0.2462,
+    "novelty10": 11.5578031539917,
+    "nfvr10": 0.003118712273641851,
+    "evaluated_users": 994,
+    "all_target_users": 2229
+  },
+  "Sequence-only GRU": {
+    "recall10": 0.096579476861167,
+    "ndcg10": 0.05566110402005049,
+    "unconditional_recall10": 0.04306864064602961,
+    "coverage10": 0.2846,
+    "novelty10": 11.969996452331543,
+    "nfvr10": 0.002716297786720322,
+    "evaluated_users": 994,
+    "all_target_users": 2229
+  },
+  "NextBeat": {
+    "recall10": 0.1096579476861167,
+    "ndcg10": 0.05672326722822194,
+    "unconditional_recall10": 0.048900852400179454,
+    "coverage10": 0.2869,
+    "novelty10": 11.944375991821289,
+    "nfvr10": 0.003118712273641851,
+    "evaluated_users": 994,
+    "all_target_users": 2229
+  }
+}

@@ -1,0 +1,12 @@
+numpy==2.3.5
+scipy==1.17.0
+pandas==2.2.3
+polars==1.44.1
+pyarrow==25.0.1
+torch==2.14.0
+streamlit==1.63.0
+pytest==9.1.1
+fastapi==0.141.1
+uvicorn==0.52.4
+httpx==0.28.1
+filelock==3.32.5

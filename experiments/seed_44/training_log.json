@@ -1,0 +1,50 @@
+[
+  {
+    "model": "Sequence-only GRU",
+    "epoch": 1,
+    "examples": 2837655,
+    "loss": 0.804090915002828,
+    "validation_ndcg10": 0.041654636996177864,
+    "seconds": 372.9
+  },
+  {
+    "model": "Sequence-only GRU",
+    "epoch": 2,
+    "examples": 2837655,
+    "loss": 0.6081028470123329,
+    "validation_ndcg10": 0.05526025088939558,
+    "seconds": 364.5
+  },
+  {
+    "model": "Sequence-only GRU",
+    "epoch": 3,
+    "examples": 2837655,
+    "loss": 0.5600769479911766,
+    "validation_ndcg10": 0.06428153676308293,
+    "seconds": 379.9
+  },
+  {
+    "model": "NextBeat",
+    "epoch": 1,
+    "examples": 2837655,
+    "loss": 0.7985514354860656,
+    "validation_ndcg10": 0.0386641450516496,
+    "seconds": 374.6
+  },
+  {
+    "model": "NextBeat",
+    "epoch": 2,
+    "examples": 2837655,
+    "loss": 0.6065685463665669,
+    "validation_ndcg10": 0.05851954125410384,
+    "seconds": 339.2
+  },
+  {
+    "model": "NextBeat",
+    "epoch": 3,
+    "examples": 2837655,
+    "loss": 0.5575723021539695,
+    "validation_ndcg10": 0.06648454922410335,
+    "seconds": 317.3
+  }
+]
