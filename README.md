@@ -104,3 +104,10 @@ The Docker recipe is included but has not been build-tested. The project has not
 - [Sequential recommendation background: GRU4Rec](https://arxiv.org/abs/1511.06939)
 
 Dataset revision and hashes are recorded in `artifacts/manifest.json`. Dataset attribution and licence terms are included in `NOTICE.md`, `YAMBDA_LICENSE.txt` and `APACHE-2.0.txt`.
+
+## Deployed app
+
+- Frontend: https://holberton-project.vercel.app
+- Backend API: https://holberton-project.onrender.com (`/docs` for interactive API docs)
+
+To redeploy after new commits: Render and Vercel both auto-deploy on push to `main`. To redeploy manually, use each dashboard's "Deploy latest commit" / "Redeploy" action.
