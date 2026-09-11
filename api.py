@@ -1,5 +1,6 @@
 """Read-only API for the trained NextBeat model; anonymous IDs only."""
 from pathlib import Path
+from functools import lru_cache
 import json
 import os
 import numpy as np
@@ -13,7 +14,8 @@ from run import top10, windowed_active_dislikes
 
 app = FastAPI(title='NextBeat', version='1.0.0')
 origins = os.environ.get('ALLOWED_ORIGINS', '*')
-app.add_middleware(CORSMiddleware, allow_origins=origins.split(',') if origins != '*' else ['*'],
+app.add_middleware(CORSMiddleware,
+                    allow_origins=[o.strip().rstrip('/') for o in origins.split(',')] if origins != '*' else ['*'],
                     allow_methods=['GET', 'POST'], allow_headers=['*'])
 ROOT = Path(__file__).parent / 'artifacts'
 cache = None
@@ -112,6 +114,7 @@ def score_and_rank(data, model_obj, model_name, x, f):
     return [{'track_id': int(data['vocab'][j-2]), 'score': float(scores[0, j])} for j in ranking]
 
 
+@lru_cache(maxsize=4)
 def model_for(name, n_items):
     if name in ['NextBeat', 'Sequence-only GRU']:
         model = NextBeat(n_items, feedback=name == 'NextBeat')
