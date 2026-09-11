@@ -125,8 +125,12 @@ def active_dislikes(data, positions):
     return result
 
 
-def top10(scores):
+def top10(scores, blocked=None):
     scores[:, :2] = -np.inf
+    if blocked is not None:
+        for row, ids in zip(scores, blocked):
+            if len(ids):
+                row[np.asarray(ids, dtype=np.int64)] = -np.inf
     selected = np.argpartition(scores, -10, axis=1)[:, -10:]
     return np.take_along_axis(selected, np.argsort(-np.take_along_axis(scores, selected, axis=1), axis=1), axis=1)
 

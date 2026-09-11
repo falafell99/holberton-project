@@ -42,6 +42,18 @@ def test_reserved_ids_never_recommended():
     assert ranks.shape == (1,10) and ranks.min() >= 2
 
 
+def test_top10_never_returns_blocked_items():
+    scores = np.arange(15, dtype=float)[None]
+    ranks = top10(scores.copy(), blocked=[np.array([12, 13, 14])])
+    assert set(ranks[0].tolist()).isdisjoint({12, 13, 14})
+
+
+def test_top10_blocked_none_is_backward_compatible():
+    scores = np.arange(15, dtype=float)[None]
+    ranks = top10(scores.copy())
+    assert ranks.shape == (1, 10) and ranks.min() >= 2
+
+
 def test_metrics_known_answer():
     q = dict(y=np.array([2]), total=2)
     ranks = np.arange(2,12)[None]
