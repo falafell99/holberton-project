@@ -130,3 +130,40 @@ def test_evaluate_stage_is_registered_in_cli():
     result = subprocess.run([sys.executable, 'run.py', '--help'], capture_output=True, text=True,
                             cwd=str(ROOT.parent))
     assert 'evaluate' in result.stdout
+
+
+def test_no_model_ever_recommends_an_active_dislike():
+    from run import windowed_active_dislikes
+    from models import NextBeat
+    data = np.load(ROOT / 'demo.npz')
+    knn = None
+    import scipy.sparse as sp
+    knn = sp.load_npz(ROOT / 'itemknn.npz')
+    models = {}
+    for name, filename, feedback in [('NextBeat', 'nextbeat.pt', True), ('Sequence-only GRU', 'sequence.pt', False)]:
+        model = NextBeat(len(data['counts']), feedback=feedback)
+        model.load_state_dict(torch.load(ROOT / filename, map_location='cpu', weights_only=True))
+        model.eval()
+        models[name] = model
+    checked = 0
+    for i in range(len(data['uid'])):
+        blocked = windowed_active_dislikes(data['x'][i], data['f'][i])
+        if len(blocked) == 0:
+            continue
+        checked += 1
+        x = data['x'][i:i+1]
+        f = data['f'][i:i+1]
+        with torch.no_grad():
+            for name, model in models.items():
+                scores = model.scores(torch.tensor(x, dtype=torch.long), torch.tensor(f, dtype=torch.float32)).numpy()
+                ranking = top10(scores, [blocked])[0]
+                assert set(ranking.tolist()).isdisjoint(set(blocked.tolist())), f'{name} recommended a disliked track'
+        seen = x[0][x[0] >= 2]
+        knn_scores = np.asarray(knn[seen].sum(axis=0)) if len(seen) else data['counts'][None].copy()
+        knn_scores = knn_scores + data['counts'][None] / data['counts'].max() * 1e-6
+        ranking = top10(knn_scores, [blocked])[0]
+        assert set(ranking.tolist()).isdisjoint(set(blocked.tolist())), 'ItemKNN recommended a disliked track'
+        pop_scores = data['counts'][None].copy()
+        ranking = top10(pop_scores, [blocked])[0]
+        assert set(ranking.tolist()).isdisjoint(set(blocked.tolist())), 'Most Popular recommended a disliked track'
+    assert checked > 0, 'No demo.npz users had an active dislike — test is not exercising anything'
