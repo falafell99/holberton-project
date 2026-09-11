@@ -49,6 +49,26 @@ def models():
     return {'models': ['NextBeat', 'Sequence-only GRU', 'ItemKNN', 'Most Popular'], 'default': selected}
 
 
+def track_label(data, item):
+    return f'Track {int(data["vocab"][item-2])}' if item >= 2 else 'Outside selected catalogue'
+
+
+@app.get('/history/{uid}')
+def history(uid: int):
+    data, _, _ = resources()
+    ix = np.flatnonzero(data['uid'] == uid)
+    if len(ix) == 0:
+        raise HTTPException(404, 'Anonymous user is not in the saved evaluation cohort.')
+    i = int(ix[0])
+    rows = []
+    for item, features in zip(data['x'][i], data['f'][i]):
+        if item:
+            event = ['listen', 'like', 'dislike', 'unlike', 'undislike'][int(np.argmax(features[1:]))]
+            rows.append({'track': track_label(data, int(item)), 'event': event,
+                        'played_percent': round(float(features[0]) * 100, 1) if event == 'listen' else None})
+    return {'uid': uid, 'history': rows}
+
+
 @app.get('/users')
 def users():
     data, _, _ = resources()

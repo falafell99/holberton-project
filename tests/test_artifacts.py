@@ -110,3 +110,27 @@ def test_full_target_training_keeps_reference_data_and_split():
     assert len(logs) == 6
     assert all(row['examples'] == m['strict_time_train_targets'] for row in logs)
     assert m['selected_model_by_validation'] == max(m['validation_ndcg10'], key=m['validation_ndcg10'].get)
+
+
+def test_history_endpoint_matches_streamlit_track_formatting():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    uid = client.get('/users').json()['anonymous_user_ids'][0]
+    response = client.get(f'/history/{uid}')
+    assert response.status_code == 200
+    body = response.json()
+    assert body['uid'] == uid
+    assert isinstance(body['history'], list)
+    for row in body['history']:
+        assert row['event'] in ['listen', 'like', 'dislike', 'unlike', 'undislike']
+        assert row['track'].startswith('Track ') or row['track'] == 'Outside selected catalogue'
+        if row['event'] != 'listen':
+            assert row['played_percent'] is None
+
+
+def test_history_endpoint_unknown_user_404s():
+    from fastapi.testclient import TestClient
+    from api import app
+    client = TestClient(app)
+    assert client.get('/history/-1').status_code == 404
