@@ -7,7 +7,7 @@ import scipy.sparse as sp
 import streamlit as st
 import torch
 from models import NextBeat
-from run import top10, windowed_active_dislikes
+from run import top10, serving_dislikes
 
 ROOT = Path(__file__).parent / 'artifacts'
 st.set_page_config(page_title='NextBeat', page_icon='🎧', layout='wide')
@@ -66,7 +66,7 @@ if edit != 'Keep recorded event':
                 'Dislike': [0,0,0,1,0,0], 'Short listen': [.1,1,0,0,0,0]}[edit]
     st.info('This is an explicitly edited what-if input. It does not change the recorded data or evaluation scores.')
 if st.button('Recommend next tracks', type='primary'):
-    blocked = [windowed_active_dislikes(x[0], f[0])]
+    blocked = [serving_dislikes(data, i, x[0], f[0])]
     if choice in models:
         with torch.no_grad():
             scores = models[choice].scores(torch.tensor(x, dtype=torch.long), torch.tensor(f, dtype=torch.float32)).numpy()
@@ -91,4 +91,4 @@ formats = {'Recall@10':'{:.2%}', 'NDCG@10':'{:.4f}', 'Recall (all targets)':'{:.
 st.dataframe(display[list(formats)].style.format(formats))
 st.caption(f"{manifest['test_users']:,} eligible in-catalogue targets; "
            f"{report['NextBeat']['all_target_users']:,} total test targets. One recorded next listen per user.")
-st.caption('Repeat listens are allowed. Unknown test targets are excluded from conditional metrics and included as misses in unconditional Recall. NFVR measures active prior dislikes without an automatic filter.')
+st.caption('Repeat listens are allowed. Unknown test targets are excluded from conditional metrics and included as misses in unconditional Recall. All models filter active dislikes from the full prior history in evaluation and live recommendations. Zero NFVR reflects this filter, not perfect learned dislike avoidance.')

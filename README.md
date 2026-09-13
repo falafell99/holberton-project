@@ -47,7 +47,7 @@ The comparison includes Most Popular, ItemKNN, a sequence-only GRU, and NextBeat
 
 Across training seeds 42, 43 and 44, mean Recall@10 was 10.03% for NextBeat and 9.29% for the sequence-only GRU. Mean NDCG@10 was 0.0534 and 0.0519 respectively. NextBeat had higher NDCG in two of the three runs. This is a small, mixed advantage on one fixed split, not a consistent improvement on every metric.
 
-The interface shows the original seed-42 results. It keeps the model selected by validation NDCG, rather than selecting a training seed using test results. All four models now score 0.000% dislike violations (NFVR) on the reported test-set metric, across all three training seeds — down from 0.312% for NextBeat and 0.272% for the sequence-only GRU before an inference-time filter was added that excludes any track a user actively disliked from every model's ranking. This reported figure is scoped to the batch evaluation, which checks a user's entire history; the live Streamlit app and API filter only within the same 20-event context window the model sees, so a dislike far outside that window is not guaranteed to be filtered live even though it is filtered in the reported metric.
+The interface shows the original seed-42 results. It keeps the model selected by validation NDCG, rather than selecting a training seed using test results. All four models now score 0.000% dislike violations (NFVR) on the reported test-set metric, across all three training seeds — down from 0.312% for NextBeat and 0.272% for the sequence-only GRU before an inference-time filter was added that excludes any track a user actively disliked from every model's ranking. Batch evaluation, Streamlit and the API use the same full prior active-dislike history. The model input remains the last 20 events; the filter separately retains older active dislikes and removes them when an undislike is recorded. Zero NFVR reflects this shared filter, not perfect learned dislike avoidance.
 
 Recall@10 and NDCG@10 use 994 eligible targets inside the catalogue. Recall over all 2,229 test targets also counts excluded targets as misses. See `docs/Methodology.md`, `REPEATED_SEEDS.md` and `experiments/seed_results.csv` for the protocol and full comparison.
 
@@ -118,3 +118,13 @@ Dataset revision and hashes are recorded in `artifacts/manifest.json`. Dataset a
 - Backend API: https://holberton-project.onrender.com (`/docs` for interactive API docs)
 
 To redeploy after new commits: Render and Vercel both auto-deploy on push to `main`. To redeploy manually, use each dashboard's "Deploy latest commit" / "Redeploy" action.
+
+## Rebuild saved filtering history
+
+When upgrading an older `demo.npz`, regenerate its full-history dislike state from the identical prepared cohort:
+
+```bash
+python run.py export-serving --out artifacts
+```
+
+This only rebuilds `artifacts/demo.npz`; it does not train models or change evaluation scores. The updated serving file is included in this version. Deploy it together with the API and Streamlit code. Keep the original model input histories and temporal cutoffs when regenerating it. If publishing regenerated artifacts, update the `demo.npz` entry in `verification/ARTIFACT_CHECKSUMS.json` to its new SHA-256 hash.

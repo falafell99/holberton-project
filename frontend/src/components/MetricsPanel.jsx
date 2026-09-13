@@ -44,7 +44,7 @@ export default function MetricsPanel({ metrics, eligibleTargets, totalTargets })
         {eligibleTargets.toLocaleString()} eligible in-catalogue targets; {totalTargets.toLocaleString()} total test targets. One recorded next listen per user.
       </p>
       <p className="caption">
-        Repeat listens are allowed. Unknown test targets are excluded from conditional metrics and included as misses in unconditional Recall.
+        All models filter active dislikes from the full prior history, in both evaluation and live recommendations. Zero dislike violations reflect this rule. Repeat listens are allowed. Unknown test targets are excluded from conditional metrics and included as misses in unconditional Recall.
       </p>
     </>
   )
