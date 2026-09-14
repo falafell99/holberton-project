@@ -125,22 +125,59 @@ def active_dislikes(data, positions):
     return result
 
 
-# Scope gap vs active_dislikes(): only sees the last 20 events in demo.npz, so a
-# dislike further back than the serving window will not be filtered live, even
-# though the batch/evaluate NFVR metric (computed against full history) reports 0%.
-def windowed_active_dislikes(items, features):
-    """Same active-set logic as active_dislikes(), scoped to one fixed-length
-    context window (items/features rows as stored in demo.npz), for live inference."""
-    active = set()
+def windowed_active_dislikes(items, features, initial=()):
+    """Replay a context window, starting from dislikes active before that window."""
+    active = set(int(item) for item in initial if item >= 2)
     for item, row in zip(items, features):
         item = int(item)
-        if item == 0:
+        if item < 2:
             continue
         if row[3] == 1:
             active.add(item)
         elif row[5] == 1:
             active.discard(item)
     return np.array(sorted(active), dtype=np.int32)
+
+
+def serving_dislikes(data, index, items, features):
+    """Full-history filter, including an optional replacement of the last event."""
+    if 'dislike_offsets' not in data or 'dislike_items' not in data:
+        raise ValueError('Saved dislike history is missing. Run run.py export-serving with the prepared data.')
+    offsets = data['dislike_offsets']
+    initial = data['dislike_items'][offsets[index]:offsets[index + 1]]
+    return windowed_active_dislikes(items, features, initial)
+
+
+def save_serving_data(data, q, out):
+    """Keep the 20-event model input plus the active-dislike state before it."""
+    positions = data['prefix'][q['positions']]
+    begin = np.maximum(data['starts'][positions], positions - q['x'].shape[1])
+    initial = [items[items >= 2] for items in active_dislikes(data, begin)]
+    offsets = np.r_[0, np.cumsum([len(items) for items in initial])].astype(np.int64)
+    values = np.concatenate(initial) if initial else np.array([], dtype=np.int32)
+    payload = dict(x=q['x'], f=q['f'], y=q['y'], uid=data['uid'][q['positions']],
+                   vocab=data['vocab'], counts=data['counts'],
+                   dislike_offsets=offsets, dislike_items=values)
+    # Every saved serving history must implement the exact evaluation filter.
+    expected = active_dislikes(data, positions)
+    for i, blocked in enumerate(expected):
+        actual = serving_dislikes(payload, i, q['x'][i], q['f'][i])
+        if not np.array_equal(actual, blocked[blocked >= 2]):
+            raise ValueError('Serving and evaluation dislike histories do not match')
+    np.savez_compressed(Path(out) / 'demo.npz', **payload)
+
+
+def export_serving(args):
+    """Rebuild serving histories only. Model weights and results stay unchanged."""
+    out = Path(args.out)
+    with np.load(out / 'prepared.npz') as archive:
+        data = {key: archive[key] for key in archive.files}
+    new_time = np.r_[True, (data['uid'][1:] != data['uid'][:-1]) | (data['ts'][1:] != data['ts'][:-1])]
+    data['prefix'] = np.maximum.accumulate(np.where(new_time, np.arange(len(new_time)), 0))
+    manifest = json.loads((out / 'manifest.json').read_text())
+    test = queries(data, manifest['cutoffs'][1], np.iinfo(np.uint32).max)
+    save_serving_data(data, test, out)
+    print(f"Exported {len(test['y'])} histories with full prior dislike state; weights and results unchanged.")
 
 
 def top10(scores, blocked=None):
@@ -288,8 +325,7 @@ def train(args):
         results[name] = metrics(neural_ranks(model, test, blocked), test, counts, blocked)
         (out / 'results.json').write_text(json.dumps(results, indent=2))
     # Real held-out histories, no invented users or songs.
-    np.savez_compressed(out / 'demo.npz', x=test['x'], f=test['f'], y=test['y'],
-                        uid=data['uid'][test['positions']], vocab=data['vocab'], counts=counts)
+    save_serving_data(data, test, out)
     manifest['training'] = vars(args)
     manifest['strict_time_train_targets'] = len(data['targets'])
     manifest['tie_policy'] = 'Exclude every event with timestamp equal to the target timestamp from its input'
@@ -331,7 +367,7 @@ def evaluate(args):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('stage', choices=['prepare', 'train', 'evaluate'])
+    p.add_argument('stage', choices=['prepare', 'train', 'evaluate', 'export-serving'])
     p.add_argument('--raw', default='data/raw/multi_event.parquet')
     p.add_argument('--out', default='artifacts')
     p.add_argument('--users', type=int, default=2500)
@@ -345,7 +381,9 @@ if __name__ == '__main__':
     a = p.parse_args()
     if a.users < 1 or a.catalog < 100 or a.epochs < 1 or a.examples < 1 or a.threads < 1:
         p.error('Use positive user/epoch/example/thread counts and a catalogue of at least 100.')
-    if a.stage == 'train':
+    if a.stage == 'export-serving':
+        export_serving(a)
+    elif a.stage == 'train':
         # Separate output folders may train concurrently; one folder has one writer.
         from filelock import FileLock
         with FileLock(str(Path(a.out) / '.training.lock')):

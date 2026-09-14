@@ -235,3 +235,28 @@ def test_post_recommend_never_returns_an_active_dislike():
         if checked >= 5:
             break
     assert checked > 0, 'No demo.npz users had an active dislike — test is not exercising anything'
+
+
+def test_api_blocks_dislikes_older_than_model_window():
+    from fastapi.testclient import TestClient
+    from api import app
+    from run import serving_dislikes, windowed_active_dislikes
+    client = TestClient(app)
+    with np.load(ROOT / 'demo.npz') as archive:
+        data = {key: archive[key] for key in archive.files}
+    checked = 0
+    for i, uid in enumerate(data['uid']):
+        full = serving_dislikes(data, i, data['x'][i], data['f'][i])
+        recent = windowed_active_dislikes(data['x'][i], data['f'][i])
+        older = set(full.tolist()) - set(recent.tolist())
+        if not older:
+            continue
+        older_track_ids = {int(data['vocab'][item - 2]) for item in older}
+        for name in ['Most Popular', 'ItemKNN', 'Sequence-only GRU', 'NextBeat']:
+            response = client.post(f'/recommend/{int(uid)}', json={'model': name})
+            assert response.status_code == 200
+            assert older_track_ids.isdisjoint({row['track_id'] for row in response.json()['recommendations']})
+        checked += 1
+        if checked == 5:
+            break
+    assert checked == 5, 'Expected real users with older active dislikes'

@@ -211,3 +211,42 @@ def test_no_model_ever_recommends_an_active_dislike():
         ranking = top10(pop_scores, [blocked])[0]
         assert set(ranking.tolist()).isdisjoint(set(blocked.tolist())), 'Most Popular recommended a disliked track'
     assert checked > 0, 'No demo.npz users had an active dislike — test is not exercising anything'
+
+
+def test_serving_filter_keeps_old_dislikes_and_replays_reversals():
+    from run import serving_dislikes
+    data = dict(dislike_offsets=np.array([0, 2]), dislike_items=np.array([2, 3]))
+    items = np.array([4, 3])
+    features = np.zeros((2, 6))
+    features[1, 5] = 1  # Undislike track 3, which was disliked before the window.
+    assert serving_dislikes(data, 0, items, features).tolist() == [2]
+    features[1] = [1, 1, 0, 0, 0, 0]  # Replacing the reversal preserves the old dislike.
+    assert serving_dislikes(data, 0, items, features).tolist() == [2, 3]
+    features[1] = [0, 0, 0, 1, 0, 0]
+    assert serving_dislikes(data, 0, items, features).tolist() == [2, 3]
+
+
+def test_serving_filter_requires_full_history_state():
+    from run import serving_dislikes
+    with pytest.raises(ValueError, match='Saved dislike history is missing'):
+        serving_dislikes({}, 0, np.array([2]), np.zeros((1, 6)))
+
+
+def test_export_preserves_full_history_dislikes_beyond_twenty_events(tmp_path):
+    from run import save_serving_data, serving_dislikes
+    items = np.r_[2, np.repeat(3, 24), 4].astype(np.int32)
+    features = np.zeros((26, 6))
+    features[:, 1] = 1
+    features[0] = [0, 0, 0, 1, 0, 0]
+    data = dict(items=items, features=features, starts=np.zeros(26, int),
+                prefix=np.arange(26), uid=np.repeat(100, 26),
+                vocab=np.arange(1000, 1012), counts=np.ones(14))
+    x, f = contexts(items, features, data['starts'], np.array([25]))
+    q = dict(positions=np.array([25]), x=x, f=f, y=np.array([4]))
+    save_serving_data(data, q, tmp_path)
+    with np.load(tmp_path / 'demo.npz') as saved:
+        blocked = serving_dislikes(saved, 0, saved['x'][0], saved['f'][0])
+        assert blocked.tolist() == [2]
+        scores = np.arange(14, dtype=float)[None]
+        scores[0, 2] = 1000
+        assert 2 not in top10(scores, [blocked])[0]

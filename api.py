@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from models import NextBeat
-from run import top10, windowed_active_dislikes
+from run import top10, serving_dislikes
 
 app = FastAPI(title='NextBeat', version='1.0.0')
 origins = os.environ.get('ALLOWED_ORIGINS', '*')
@@ -99,8 +99,8 @@ class RecommendRequest(BaseModel):
     what_if: str = 'keep'
 
 
-def score_and_rank(data, model_obj, model_name, x, f):
-    blocked = [windowed_active_dislikes(x[0], f[0])]
+def score_and_rank(data, model_obj, model_name, x, f, index):
+    blocked = [serving_dislikes(data, index, x[0], f[0])]
     if model_name == 'Most Popular':
         scores = data['counts'][None].copy()
     elif model_name == 'ItemKNN':
@@ -134,7 +134,7 @@ def recommend(uid: int):
     if len(ix) == 0:
         raise HTTPException(404, 'Anonymous user is not in the saved evaluation cohort.')
     i = int(ix[0])
-    recommendations = score_and_rank(data, model, selected, data['x'][i:i+1], data['f'][i:i+1])
+    recommendations = score_and_rank(data, model, selected, data['x'][i:i+1], data['f'][i:i+1], i)
     return {'uid': uid, 'model': selected, 'recommendations': recommendations}
 
 
@@ -155,5 +155,5 @@ def recommend_with_options(uid: int, body: RecommendRequest):
     edit = WHAT_IF_EDITS[body.what_if]
     if edit is not None:
         f[0, -1] = edit
-    recommendations = score_and_rank(data, model_obj, model_name, x, f)
+    recommendations = score_and_rank(data, model_obj, model_name, x, f, i)
     return {'uid': uid, 'model': model_name, 'recommendations': recommendations}

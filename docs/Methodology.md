@@ -21,7 +21,7 @@ For each period evaluation uses the first positive listen per user, using only e
 
 Conditional Recall@10 and NDCG@10 use targets inside the training catalogue with nonempty history. Unconditional Recall also counts excluded targets as misses. Always show both: the restricted catalogue makes conditional metrics easier. This is a one-target-per-user evaluation, not every future listen.
 
-NFVR is the fraction of recommendations that repeat an actively disliked track from the known history. An undislike removes that track from the active set. There is no automatic dislike filter in evaluation, so a zero score is not guaranteed by removing every seen item. Short listens are observable behaviour, not proof that the user disliked a song.
+NFVR is the fraction of recommendations that repeat an actively disliked track from the known history. An undislike removes that track from the active set. All four models apply an automatic active-dislike filter using the full strictly earlier history, both in evaluation and live recommendations. Zero NFVR therefore measures enforcement of this rule, not learned avoidance. The neural model still sees only its last 20 events; the filter retains older active dislikes separately. A what-if edit replaces the last event and recomputes the active set without changing the saved history. Short listens are observable behaviour, not proof that the user disliked a song.
 
 `artifacts/results.json` contains measured test results; `training_log.json` contains actual epoch losses, validation scores, and timings. `manifest.json` records source revision, checksum, exact counts, cohort seed, and temporal boundaries.
 
