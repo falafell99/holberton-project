@@ -221,3 +221,14 @@ td.rank {
     transition: none !important;
   }
 }
+
+.selection-controls {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.selection-controls:disabled select {
+  opacity: 0.6;
+  cursor: wait;
+}
