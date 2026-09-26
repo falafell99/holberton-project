@@ -1,10 +1,12 @@
 {
-  "nextbeat_minus_sequence_ndcg10": 0.0010621632081714498,
+  "nextbeat_minus_sequence_ndcg10": 0.0007833909174553595,
   "paired_user_bootstrap_95_percent": [
-    -0.007737183294143579,
-    0.009648504632359079
+    -0.008118732307469513,
+    0.009541495571379134
   ],
   "replicates": 2000,
   "seed": 42,
-  "scope": "User sampling uncertainty only; not training-seed variance"
+  "evaluated_users": 994,
+  "evaluation": "Full prior active-dislike filtering; seed-42 frozen models; same cohort as results.json",
+  "scope": "User sampling uncertainty only; not training-seed variance or independent generalization proof"
 }

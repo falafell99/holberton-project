@@ -128,3 +128,42 @@ python run.py export-serving --out artifacts
 ```
 
 This only rebuilds `artifacts/demo.npz`; it does not train models or change evaluation scores. The updated serving file is included in this version. Deploy it together with the API and Streamlit code. Keep the original model input histories and temporal cutoffs when regenerating it. If publishing regenerated artifacts, update the `demo.npz` entry in `verification/ARTIFACT_CHECKSUMS.json` to its new SHA-256 hash.
+
+## Final demo setup and verification
+
+The deployed frontend is https://holberton-project.vercel.app/ . It depends on the separate backend at https://holberton-project.onrender.com . A frontend deployment marked Ready does not prove backend availability.
+
+Frontend checks (Node.js installed):
+
+```powershell
+cd frontend
+npm.cmd ci
+npm.cmd test
+npm.cmd run build
+```
+
+Run backend checks from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+For a local React demo, keep two terminals open. In the first, from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn api:app --host 127.0.0.1 --port 8000
+```
+
+In the second:
+
+```powershell
+cd frontend
+$env:VITE_API_URL = "http://127.0.0.1:8000"
+npm.cmd run dev -- --host 127.0.0.1
+```
+
+Open the address printed by Vite. This uses the same saved models and requires no retraining. Dependencies must be installed before going offline. The API's default CORS configuration permits this local setup; if ALLOWED_ORIGINS is set, include the exact local frontend origin.
+
+Before presenting, load user 600, request NextBeat recommendations, compare Sequence-only GRU, then try a dislike what-if. Allow each request to finish. Keep a backup recording for hosting or network interruptions. If the public frontend loads but API requests repeatedly time out, inspect the backend hosting logs and service status; changing the frontend alone cannot repair an unavailable backend.
+
+Saved artifact JSON files use LF line endings through `.gitattributes` so byte checksums remain stable on Windows. The refreshed uncertainty estimate matches the filtered test results; see `docs/Methodology.md` for the remaining validation-policy limitation.
