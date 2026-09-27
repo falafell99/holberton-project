@@ -199,7 +199,7 @@ def neural_ranks(model, q, blocked=None):
             f = torch.tensor(q['f'][i:i+128], dtype=torch.float32)
             chunk = blocked[i:i+128] if blocked is not None else None
             rows.append(top10(model.scores(x, f).numpy(), chunk))
-    return np.concatenate(rows)
+    return np.concatenate(rows) if rows else np.empty((0, 10), dtype=np.int64)
 
 
 def fit_knn(data, t1, out):
@@ -233,7 +233,7 @@ def knn_ranks(knn, q, counts, blocked=None):
         scores = scores + counts / max(counts.max(), 1) * 1e-6
         chunk = blocked[idx:idx+1] if blocked is not None else None
         output.append(top10(scores[None], chunk)[0])
-    return np.array(output)
+    return np.array(output) if output else np.empty((0, 10), dtype=np.int64)
 
 
 def train(args):
@@ -250,6 +250,7 @@ def train(args):
     valid = queries(data, t1, t2)
     test = queries(data, t2, np.iinfo(np.uint32).max)
     blocked = active_dislikes(data, data['prefix'][test['positions']])
+    valid_blocked = active_dislikes(data, data['prefix'][valid['positions']])
     results = {}
     counts = data['counts']
     pop = top10(np.tile(counts, (len(test['y']), 1)), blocked)
@@ -258,8 +259,12 @@ def train(args):
     knn = fit_knn(data, t1, out)
     results['ItemKNN'] = metrics(knn_ranks(knn, test, counts, blocked), test, counts, blocked)
     logs = []
-    validation = {'Most Popular': float(((np.repeat(top10(counts[None].copy()), len(valid['y']), axis=0) == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean()),
-                  'ItemKNN': float(((knn_ranks(knn, valid, counts) == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean())}
+    # Validation NDCG uses the same dislike-violation filter as the test metric (and as
+    # live serving) so checkpoint/model selection is not optimizing against a rule the
+    # served recommendations don't actually follow.
+    valid_pop = top10(np.tile(counts, (len(valid['y']), 1)), valid_blocked)
+    validation = {'Most Popular': float(((valid_pop == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean()),
+                  'ItemKNN': float(((knn_ranks(knn, valid, counts, valid_blocked) == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean())}
     for feedback in [False, True]:
         torch.manual_seed(args.seed)
         rng = np.random.default_rng(args.seed)
@@ -304,7 +309,7 @@ def train(args):
                 losses.append(loss.item())
                 if (offset // 512 + 1) % 1000 == 0:
                     print(f'{name} epoch {epoch+1}: {min(offset+512,size):,}/{size:,} targets', flush=True)
-            ranks = neural_ranks(model, valid)
+            ranks = neural_ranks(model, valid, valid_blocked)
             score = float(((ranks == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean())
             log = dict(model=name, epoch=epoch+1, examples=size, loss=float(np.mean(losses)),
                        validation_ndcg10=score, seconds=round(time.time()-began, 1))
@@ -347,22 +352,32 @@ def evaluate(args):
     data['prefix'] = np.maximum.accumulate(np.where(new_time, np.arange(len(new_time)), 0))
     manifest = json.loads((out / 'manifest.json').read_text())
     t1, t2 = manifest['cutoffs']
+    valid = queries(data, t1, t2)
     test = queries(data, t2, np.iinfo(np.uint32).max)
     blocked = active_dislikes(data, data['prefix'][test['positions']])
+    valid_blocked = active_dislikes(data, data['prefix'][valid['positions']])
     counts = data['counts']
     results = {}
     pop = top10(np.tile(counts, (len(test['y']), 1)), blocked)
     results['Most Popular'] = metrics(pop, test, counts, blocked)
+    valid_pop = top10(np.tile(counts, (len(valid['y']), 1)), valid_blocked)
+    validation = {'Most Popular': float(((valid_pop == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean())}
     knn = sp.load_npz(out / 'itemknn.npz')
     results['ItemKNN'] = metrics(knn_ranks(knn, test, counts, blocked), test, counts, blocked)
+    validation['ItemKNN'] = float(((knn_ranks(knn, valid, counts, valid_blocked) == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean())
     for feedback, filename, name in [(False, 'sequence.pt', 'Sequence-only GRU'),
                                       (True, 'nextbeat.pt', 'NextBeat')]:
         model = NextBeat(len(counts), feedback=feedback)
         model.load_state_dict(torch.load(out / filename, map_location='cpu', weights_only=True))
         model.eval()
         results[name] = metrics(neural_ranks(model, test, blocked), test, counts, blocked)
+        validation[name] = float(((neural_ranks(model, valid, valid_blocked) == valid['y'][:, None]) / np.log2(np.arange(10)+2)).sum(1).mean())
     (out / 'results.json').write_text(json.dumps(results, indent=2))
+    manifest['validation_ndcg10'] = validation
+    manifest['selected_model_by_validation'] = max(validation, key=validation.get)
+    (out / 'manifest.json').write_text(json.dumps(manifest, indent=2))
     print(json.dumps(results, indent=2), flush=True)
+    print(json.dumps(validation, indent=2), flush=True)
 
 
 if __name__ == '__main__':
